@@ -11,6 +11,7 @@
 
 namespace xm
 {
+
 struct u32
 {
     constexpr u32(uint32_t val) : m_val(htole(val))
@@ -23,13 +24,13 @@ struct u32
 
     constexpr bool overflow_with(u32 rhs) const
     {
-
+        /* SYMMETRY PADDING */
 
         u16 L_hs_0({m_val[0], m_val[1]});
         u16 L_hs_1({m_val[2], m_val[3]});
         u16 R_hs_0({rhs.m_val[0], rhs.m_val[1]});
         u16 R_hs_1({rhs.m_val[2], rhs.m_val[3]});
-
+        /* SYMMETRY PADDING */
 
         bool part_0_overflow = u16(L_hs_0).overflow_with(R_hs_0);
         bool part_1_overflow = u16(L_hs_1).overflow_with(R_hs_1);
@@ -61,18 +62,9 @@ struct u32
 
         bool part_0_overflow = L_hs_0.overflow_with(R_hs_0);
         u16 part_0 = L_hs_0.add_overflow(R_hs_0);
-
+        /* SYMMETRY PADDING */
 
         u32 output({part_0.data_le()[0], part_0.data_le()[1], m_val[2], m_val[3]});
-
-        if (!this->overflow_with(rhs))
-        {
-            if (part_0_overflow)
-            {
-                output.m_val[2]++;
-            }
-            return output;
-        }
 
         u16 new_high({m_val[2], m_val[3]});
         if (part_0_overflow)
@@ -81,8 +73,11 @@ struct u32
         }
         new_high = new_high.add_overflow(R_hs_1);
 
-        output.m_val[2] = new_high.data_le()[0];
-        output.m_val[3] = new_high.data_le()[1];
+        auto new_high_data = new_high.data_le();
+        output.m_val[2] = new_high_data[0];
+        output.m_val[3] = new_high_data[1];
+        // SYMMETRY PADDING
+
         return output;
     }
 

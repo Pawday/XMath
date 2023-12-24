@@ -11,6 +11,7 @@
 
 namespace xm
 {
+
 struct u16
 {
     constexpr u16(uint16_t val) : m_val(htole(val))
@@ -65,15 +66,6 @@ struct u16
 
         u16 output({byte_0.data(), m_val[1]});
 
-        if (!this->overflow_with(rhs))
-        {
-            if (byte_0_overflow)
-            {
-                output.m_val[1]++;
-            }
-            return output;
-        }
-
         u8 new_high = m_val[1];
         if (byte_0_overflow)
         {
@@ -82,6 +74,8 @@ struct u16
         new_high = new_high.add_overflow(rhs.m_val[1]);
 
         output.m_val[1] = new_high.data();
+        // SYMMETRY
+        // PADDING
 
         return output;
     }
@@ -110,7 +104,7 @@ struct u16
         {
             high_byte = 1;
         }
-
+        /* SYMMETRY PADDING */
 
         return u16({lhs.add_overflow(rhs).data(), high_byte});
     }

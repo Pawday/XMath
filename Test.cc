@@ -1,10 +1,11 @@
+#include <cstdlib>
+
 #include "u8_tests.hh"
-
-#include "u16.hh"
-
 #include "u16_tests.hh"
+#include "u32_tests.hh"
+#include "u64_tests.hh"
 
 int main()
 {
-    using namespace xm;
+    return EXIT_SUCCESS;
 }
