@@ -7,6 +7,4 @@
 int main()
 {
     using namespace xm;
-
-    u16(0xffff).add_overflow(0x0001);
 }

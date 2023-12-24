@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -12,7 +13,6 @@ namespace xm
 {
 struct u16
 {
-
     constexpr u16(uint16_t val) : m_val(htole(val))
     {
     }
@@ -23,6 +23,14 @@ struct u16
 
     constexpr bool overflow_with(u16 r) const
     {
+        /*
+         * +------------------+
+         * |                  |
+         * | SYMMETRY PADDING |
+         * |                  |
+         * +------------------+
+         */
+
         bool b0_overflow = u8(this->m_val[0]).overflow_with(r.m_val[0]);
         bool b1_overflow = u8(this->m_val[1]).overflow_with(r.m_val[1]);
 
@@ -44,14 +52,20 @@ struct u16
         return u8(this->m_val[1]).overflow_with(1);
     }
 
-    [[nodiscard]] constexpr u16 add_overflow(u16 increment) const
+    [[nodiscard]] constexpr u16 add_overflow(u16 rhs) const
     {
-        bool byte_0_overflow = u8(this->m_val[0]).overflow_with(increment.m_val[0]);
-        u8 byte_0 = u8(this->m_val[0]).add_overflow(increment.m_val[0]);
+        bool byte_0_overflow = u8(m_val[0]).overflow_with(rhs.m_val[0]);
+        u8 byte_0 = u8(m_val[0]).add_overflow(rhs.m_val[0]);
 
-        u16 output({byte_0.data(), this->m_val[1]});
+        /*
+         * +------------------+
+         * | SYMMETRY PADDING |
+         * +------------------+
+         */
 
-        if (!this->overflow_with(increment))
+        u16 output({byte_0.data(), m_val[1]});
+
+        if (!this->overflow_with(rhs))
         {
             if (byte_0_overflow)
             {
@@ -60,14 +74,15 @@ struct u16
             return output;
         }
 
-        u8 new_high(this->m_val[1]);
+        u8 new_high = m_val[1];
         if (byte_0_overflow)
         {
             new_high = new_high.add_overflow(1);
         }
-        new_high = new_high.add_overflow(increment.m_val[1]);
+        new_high = new_high.add_overflow(rhs.m_val[1]);
 
         output.m_val[1] = new_high.data();
+
         return output;
     }
 
@@ -83,7 +98,7 @@ struct u16
             return std::nullopt;
         }
 
-        return u16(this->m_val).add_overflow(other->m_val);
+        return u16(m_val).add_overflow(other->m_val);
     }
 
     friend constexpr bool operator==(const u16 &lhs, const u16 &rhs);
@@ -95,12 +110,21 @@ struct u16
         {
             high_byte = 1;
         }
+
+
         return u16({lhs.add_overflow(rhs).data(), high_byte});
     }
 
-    constexpr std::array<uint8_t, 2> data() const
+    constexpr std::array<uint8_t, 2> data_le() const
     {
-        return this->m_val;
+        return m_val;
+    }
+
+    constexpr std::array<uint8_t, 2> data_be() const
+    {
+        std::array<uint8_t, 2> output = m_val;
+        std::reverse(begin(output), end(output));
+        return output;
     }
 
   private:
