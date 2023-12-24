@@ -1,5 +1,8 @@
 #pragma once
 
+
+#if 0
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -22,18 +25,15 @@ struct u16
     {
     }
 
-    constexpr bool overflow_with(u16 r) const
+    constexpr bool overflow_with(u16 rhs) const
     {
-        /*
-         * +------------------+
-         * |                  |
-         * | SYMMETRY PADDING |
-         * |                  |
-         * +------------------+
-         */
+        u8 Lhs_0(this->ls_part());
+        u8 Lhs_1(this->ms_part());
+        u8 Rhs_0(rhs.ls_part());
+        u8 Rhs_1(rhs.ms_part());
 
-        bool b0_overflow = u8(this->m_val[0]).overflow_with(r.m_val[0]);
-        bool b1_overflow = u8(this->m_val[1]).overflow_with(r.m_val[1]);
+        bool b0_overflow = Lhs_0.overflow_with(Rhs_0);
+        bool b1_overflow = Lhs_1.overflow_with(Rhs_1);
 
         if (!b0_overflow && !b1_overflow)
         {
@@ -50,33 +50,32 @@ struct u16
             return true;
         }
 
-        return u8(this->m_val[1]).overflow_with(1);
+        return Lhs_1.overflow_with(1);
     }
 
     [[nodiscard]] constexpr u16 add_overflow(u16 rhs) const
     {
-        bool byte_0_overflow = u8(m_val[0]).overflow_with(rhs.m_val[0]);
-        u8 byte_0 = u8(m_val[0]).add_overflow(rhs.m_val[0]);
+        u8 Lhs_0(this->ls_part());
+        u8 Lhs_1(this->ms_part());
+        u8 Rhs_0(rhs.ls_part());
+        u8 Rhs_1(rhs.ms_part());
 
-        /*
-         * +------------------+
-         * | SYMMETRY PADDING |
-         * +------------------+
-         */
+        bool part_0_overflow = Lhs_0.overflow_with(Rhs_0);
+        u8 part_0 = Lhs_0.add_overflow(Rhs_0);
+        auto part_0_data = part_0.data();
 
-        u16 output({byte_0.data(), m_val[1]});
+        u16 output = 0;
+        *begin(output.m_val) = part_0_data;
 
-        u8 new_high = m_val[1];
-        if (byte_0_overflow)
+        u8 new_high(this->ms_part());
+        if (part_0_overflow)
         {
             new_high = new_high.add_overflow(1);
         }
-        new_high = new_high.add_overflow(rhs.m_val[1]);
+        new_high = new_high.add_overflow(Rhs_1);
 
-        output.m_val[1] = new_high.data();
-        // SYMMETRY
-        // PADDING
-
+        auto new_high_data = new_high.data();
+        *(begin(output.m_val) + output.m_val.size() / 2) = new_high_data;
         return output;
     }
 
@@ -124,6 +123,16 @@ struct u16
   private:
     // Little endian
     std::array<uint8_t, 2> m_val;
+
+    constexpr uint8_t ls_part() const
+    {
+        return m_val[0];
+    }
+
+    constexpr uint8_t ms_part() const
+    {
+        return m_val[1];
+    }
 };
 
 constexpr bool operator==(const u16 &lhs, const u16 &rhs)
@@ -135,8 +144,20 @@ constexpr bool operator==(const u16 &lhs, const u16 &rhs)
             return false;
         }
     }
-
     return true;
 }
 
 } // namespace xm
+
+#else
+
+#include "unsigned.hh"
+
+namespace xm
+{
+
+using u16 = u<16>;
+
+}
+
+#endif

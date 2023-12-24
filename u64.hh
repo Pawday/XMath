@@ -1,5 +1,7 @@
 #pragma once
 
+#if 0
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -24,16 +26,13 @@ struct u64
 
     constexpr bool overflow_with(u64 rhs) const
     {
-        /* SYMMETRY PADDING */
+        u32 Lhs_0(this->ls_le_part());
+        u32 Lhs_1(this->ms_le_part());
+        u32 Rhs_0(rhs.ls_le_part());
+        u32 Rhs_1(rhs.ms_le_part());
 
-        u32 L_hs_0({m_val[0], m_val[1], m_val[2], m_val[3]});
-        u32 L_hs_1({m_val[4], m_val[5], m_val[6], m_val[7]});
-        u32 R_hs_0({rhs.m_val[0], rhs.m_val[1], rhs.m_val[2], rhs.m_val[3]});
-        u32 R_hs_1({rhs.m_val[4], rhs.m_val[5], rhs.m_val[6], rhs.m_val[7]});
-        /* SYMMETRY PADDING */
-
-        bool part_0_overflow = u32(L_hs_0).overflow_with(R_hs_0);
-        bool part_1_overflow = u32(L_hs_1).overflow_with(R_hs_1);
+        bool part_0_overflow = u32(Lhs_0).overflow_with(Rhs_0);
+        bool part_1_overflow = u32(Lhs_1).overflow_with(Rhs_1);
 
         if (!part_0_overflow && !part_1_overflow)
         {
@@ -50,34 +49,31 @@ struct u64
             return true;
         }
 
-        return L_hs_1.overflow_with(1);
+        return Lhs_1.overflow_with(1);
     }
 
     [[nodiscard]] constexpr u64 add_overflow(u64 rhs) const
     {
-        u32 L_hs_0({m_val[0], m_val[1], m_val[2], m_val[3]});
-        u32 L_hs_1({m_val[4], m_val[5], m_val[6], m_val[7]});
-        u32 R_hs_0({rhs.m_val[0], rhs.m_val[1], rhs.m_val[2], rhs.m_val[3]});
-        u32 R_hs_1({rhs.m_val[4], rhs.m_val[5], rhs.m_val[6], rhs.m_val[7]});
+        u32 Lhs_0(this->ls_le_part());
+        u32 Lhs_1(this->ms_le_part());
+        u32 Rhs_0(rhs.ls_le_part());
+        u32 Rhs_1(rhs.ms_le_part());
 
-        bool part_0_overflow = L_hs_0.overflow_with(R_hs_0);
-        u32 part_0 = L_hs_0.add_overflow(R_hs_0);
-
+        u32 part_0 = Lhs_0.add_overflow(Rhs_0);
         auto part_0_data = part_0.data_le();
-        u64 output({part_0_data[0], part_0_data[1], part_0_data[2], part_0_data[3], m_val[4], m_val[5], m_val[6], m_val[7]});
 
-        u32 new_high({m_val[4], m_val[5], m_val[6], m_val[7]});
-        if (part_0_overflow)
+        u64 output = 0;
+        std::copy(begin(part_0_data), end(part_0_data), begin(output.m_val));
+
+        u32 new_high(this->ms_le_part());
+        if (Lhs_0.overflow_with(Rhs_0))
         {
             new_high = new_high.add_overflow(1);
         }
-        new_high = new_high.add_overflow(R_hs_1);
+        new_high = new_high.add_overflow(Rhs_1);
 
         auto new_high_data = new_high.data_le();
-        output.m_val[4] = new_high_data[0];
-        output.m_val[5] = new_high_data[1];
-        output.m_val[6] = new_high_data[2];
-        output.m_val[7] = new_high_data[3];
+        std::copy(begin(new_high_data), end(new_high_data), begin(output.m_val) + output.m_val.size() / 2);
         return output;
     }
 
@@ -106,8 +102,13 @@ struct u64
             high_byte = 1;
         }
 
-        std::array<uint8_t, 4> part_0_data = lhs.add_overflow(rhs).data_le();
-        return u64({part_0_data[0], part_0_data[1], part_0_data[2], part_0_data[3], high_byte, 0, 0, 0});
+        u64 output = 0;
+        auto part_0_data = lhs.add_overflow(rhs).data_le();
+        auto part_1_data = std::array<uint8_t, sizeof(output) / 2>();
+        part_1_data[0] = high_byte;
+        std::copy(begin(part_0_data), end(part_0_data), begin(output.m_val));
+        std::copy(begin(part_1_data), end(part_1_data), begin(output.m_val) + output.m_val.size() / 2);
+        return output;
     }
 
     constexpr std::array<uint8_t, 8> data_le() const
@@ -125,6 +126,20 @@ struct u64
   private:
     // Little endian
     std::array<uint8_t, 8> m_val;
+
+    constexpr std::array<uint8_t, 4> ls_le_part() const
+    {
+        std::array<uint8_t, 4> output;
+        std::copy(begin(m_val), begin(m_val) + 4, begin(output));
+        return output;
+    }
+
+    constexpr std::array<uint8_t, 4> ms_le_part() const
+    {
+        std::array<uint8_t, 4> output;
+        std::copy(begin(m_val) + 4, begin(m_val) + 8, begin(output));
+        return output;
+    }
 };
 
 constexpr bool operator==(const u64 &lhs, const u64 &rhs)
@@ -141,3 +156,16 @@ constexpr bool operator==(const u64 &lhs, const u64 &rhs)
 }
 
 } // namespace xm
+
+#else
+
+#include "unsigned.hh"
+
+namespace xm
+{
+
+using u64 = u<64>;
+
+}
+
+#endif
